@@ -41,6 +41,7 @@ app.post("/register", async (req, res) => {
   try {
     console.log(req.body);
     const createuser = await usermodel.create(req.body);
+    res.redirect("/login");
     if (createuser) {
       console.log("user created successfully");
     } else {
@@ -62,22 +63,40 @@ app.post("/register", async (req, res) => {
   // }
 });
 
-app.post("/onlinelogin", (req, res) => {
-  console.log(req.body);
+app.post("/onlinelogin", async (req, res) => {
+  try {
+    console.log(req.body);
+    const user = await usermodel.findOne({ email: req.body.email });
+    if (!user) {
+      console.log("you are not a registered user ; please sign up");
+      res.redirect("/login");
+    } else {
+      if (user.password == req.body.password) {
+        console.log("login successful");
+        res.redirect("/dashboard");
+      } else {
+        console.log("invalid password");
+        res.redirect("/login");
+      }
+    }
+  } catch (error) {
+    console.log(error);
+    res.redirect("/login");
+  }
   // /this is to have access to what user is sending
   // let body = req.body;
-  const existuser = userarray.find((user) => user.email == req.body.email);
-  console.log(existuser);
-  if (!existuser) {
-    console.log("you are not a registered user ; please sign up");
-  } else {
-    if (existuser.password == req.body.password) {
-      console.log("login successful");
-      res.redirect("/dashboard");
-    } else {
-      console.log("invalid password");
-    }
-  }
+  // const existuser = userarray.find((user) => user.email == req.body.email);
+  // console.log(existuser);
+  // if (!existuser) {
+  //   console.log("you are not a registered user ; please sign up");
+  // } else {
+  //   if (existuser.password == req.body.password) {
+  //     console.log("login successful");
+  //     res.redirect("/dashboard");
+  //   } else {
+  //     console.log("invalid password");
+  //   }
+  // }
 });
 app.post("/addtodo", (req, res) => {
   console.log(req.body);
