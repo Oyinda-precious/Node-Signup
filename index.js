@@ -3,7 +3,7 @@ const app = express();
 const ejs = require("ejs");
 const mongoose = require("mongoose");
 
-// CRUD CREATE READ UPDATE DELETE
+// CRUD CREATE READ(read is to collect back information) UPDATE DELETE
 //middleware
 app.use(express.urlencoded({ extended: true }));
 app.set("view engine", "ejs");
@@ -13,13 +13,23 @@ let todoarray = [];
 let errormessage = "";
 
 const userschema = mongoose.Schema({
-  firstname: { type: String },
-  lastname: { type: String },
-  email: { type: String },
-  password: { type: Number },
+  //trim is used go clear space, required and unique to validate information.
+  firstname: { type: String, trime: true, required: true },
+  lastname: { type: String, trim: true, required: true },
+  email: { type: String, unique: true, trim: true, required: true },
+  password: { type: Number, trim: true, required: true },
 });
 
 const usermodel = mongoose.model("user_collection", userschema);
+
+const todoschema = mongoose.Schema(
+  {
+    title: { type: String, trim: true, required: true },
+    content: { type: String, trim: true, required: true },
+  },
+  { timestamps: true }
+);
+const todomodel = mongoose.model("todo_collection", todoschema);
 
 app.get("/", (request, response) => {
   response.render("signup", { errormessage });
@@ -33,8 +43,11 @@ app.get("/dashboard", (req, res) => {
   res.render("dashboard");
 });
 
-app.get("/todo", (req, res) => {
-  res.render("todo", { todoarray });
+app.get("/todo", async (req, res) => {
+  const alltodo = await todomodel.find();
+  console.log(alltodo);
+
+  res.render("todo", { alltodo });
 });
 
 app.post("/register", async (req, res) => {
@@ -62,22 +75,20 @@ app.post("/register", async (req, res) => {
   //   res.redirect("/login");
   // }
 });
-
+//destructure is used for array and object
+//find returns an array and object useful for multiple data while findOne returns only object useful for one data.
 app.post("/onlinelogin", async (req, res) => {
+  console.log(req.body);
+  const { email, password } = req.body;
   try {
-    console.log(req.body);
-    const user = await usermodel.findOne({ email: req.body.email });
-    if (!user) {
-      console.log("you are not a registered user ; please sign up");
-      res.redirect("/login");
+    const user = await usermodel.findOne({ email: email });
+    console.log(user);
+    if (user && user.password == password) {
+      console.log("login successful");
+      res.redirect("/todo");
     } else {
-      if (user.password == req.body.password) {
-        console.log("login successful");
-        res.redirect("/dashboard");
-      } else {
-        console.log("invalid password");
-        res.redirect("/login");
-      }
+      console.log("invalid user");
+      res.redirect("/login");
     }
   } catch (error) {
     console.log(error);
@@ -98,18 +109,53 @@ app.post("/onlinelogin", async (req, res) => {
   //   }
   // }
 });
-app.post("/addtodo", (req, res) => {
+app.post("/addtodo", async (req, res) => {
   console.log(req.body);
-  todoarray.push(req.body);
-  res.redirect("/todo");
+  try {
+    const todo = await todomodel.create(req.body);
+    if (todo) {
+      console.log("todo created successfully");
+      res.redirect("/todo");
+    } else {
+      console.log("error occured");
+    }
+  } catch (error) {
+    console.log(error);
+  }
+  // todoarray.push(req.body);
 });
+// const Todo = require("./todo.model");
 
-app.post("/delete", (req, res) => {
+app.post("/delete", async (req, res) => {
   console.log(req.body);
-  const { index } = req.body;
-  // let index = req.body.index;
-  todoarray.splice(index, 1);
+  try {
+    const deleteTodo = await todomodel.findOneAndDelete(req.body);
+    if (deleteTodo) {
+      console.log("Todo deleted succesfully");
+    } else {
+      console.log("Todo not found");
+    }
+  } catch (error) {
+    console.log(error);
+  }
   res.redirect("/todo");
+  //   try {
+  //     const deleteTodo = await todomodel.findOneAndDelete(req.body);
+  //     if (deleteTodo) {
+  //       console.log("Todo successfully deleted");
+
+  //       const { index } = req.body;
+  //       if (index !== undefined && index >= 0 && index < todoarray.length) {
+  //         todoarray.splice(index, 1);
+  //         console.log("Todo successfully deleted");
+  //       } else {
+  //         console.log(" could not delete ");
+  //       }
+  //     }
+  //   } catch (error) {
+  //     console.log(error);
+  //   }
+  //   res.redirect("/todo");
 });
 
 app.get("/edit/:index", (req, res) => {
